@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id       Int      @id @default(autoincrement())
+  uuid     String   @unique @default(uuid())
+  email    String   @unique
+  name     String
+  avatar   String?
+  lastname String?
+  password String
+  phones   String[]
+  address  String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Order     Order[]
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  uuid     String  @unique @default(uuid())
+  email    String  @unique
+  name     String
+  avatar   String?
+  lastname String?
+  password String
+
+  plan   Plan?   @relation(fields: [planId], references: [uuid])
+  planId String?
+
+  companies   Company[]
+  permissions CompanyPermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Company {
+  id          Int                 @id @default(autoincrement())
+  uuid        String              @unique @default(uuid())
+  logo        String?
+  name        String
+  description String?
+  User        User?               @relation(fields: [userId], references: [uuid])
+  userId      String?
+  permissions CompanyPermission[]
+  roles       Role[]
+  products    Product[]
+  warehouses  WareHouse[]
+  themes      Theme[]
+
+  phone String? @unique
+
+  documents String[]
+
+  verified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  uuid        String  @unique @default(uuid())
+  name        String
+  description String?
+
+  company     Company             @relation(fields: [companyId], references: [uuid])
+  companyId   String
+  permissions CompanyPermission[]
+  rules       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CompanyPermission {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+
+  user   User   @relation(fields: [userId], references: [uuid])
+  userId String
+
+  company   Company @relation(fields: [companyId], references: [uuid])
+  companyId String
+
+  role   Role   @relation(fields: [roleId], references: [uuid])
+  roleId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plan {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  name        String
+  description String[]
+  price       Float
+  code        String   @unique
+  users       User[]
+  position    Int?
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductCategory {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  image       String?
+  name        String
+  description String[]
+  position    Int?
+
+  products Product[]
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Brand {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  image       String?
+  name        String
+  description String[]
+  position    Int?
+
+  active Boolean @default(true)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique @default(uuid())
+  images      String[]
+  name        String
+  description String[]
+  position    Int?
+
+  active Boolean @default(true)
+
+  price Decimal @default(0)
+
+  categories ProductCategory[]
+
+  brand   Brand?  @relation(fields: [brandId], references: [uuid])
+  brandId String?
+
+  offers Offer[]
+
+  stock WareHouseStock[]
+
+  company   Company @relation(fields: [companyId], references: [uuid])
+  companyId String
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  OrderItem OrderItem[]
+}
+
+enum DiscountType {
+  porcentage
+  amount
+}
+
+model Offer {
+  id             Int     @id @default(autoincrement())
+  uuid           String  @unique @default(uuid())
+  name           String
+  discount_value Decimal
+  discount_type  Decimal
+  image          String?
+  start_date     String?
+  end_date       String?
+
+  product   Product @relation(fields: [productId], references: [uuid])
+  productId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WareHouse {
+  id      Int     @id @default(autoincrement())
+  uuid    String  @unique @default(uuid())
+  name    String
+  address String?
+
+  company   Company @relation(fields: [companyId], references: [uuid])
+  companyId String
+
+  stock WareHouseStock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WareHouseStock {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+
+  warehouse   WareHouse @relation(fields: [wareHouseId], references: [uuid])
+  wareHouseId String
+
+  product   Product @relation(fields: [productId], references: [uuid])
+  productId String
+
+  quantity Int
+
+  measurement String @default("unit")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  canceled
+  delivered
+  returned
+}
+
+model Order {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+
+  items OrderItem[]
+
+  customer   Customer @relation(fields: [customerId], references: [uuid])
+  customerId String
+
+  status OrderStatus @default(pending)
+
+  paid Boolean @default(false)
+
+  transaction_id String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique @default(uuid())
+
+  product   Product @relation(fields: [productId], references: [uuid])
+  productId String
+
+  quantity Int
+
+  discount_value Decimal
+
+  discount_type Decimal
+
+  product_price Decimal
+
+  order   Order  @relation(fields: [orderId], references: [uuid])
+  orderId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TransactionType {
+  expense
+  income
+  transfer
+  adjustment
+}
+
+model Theme {
+  id Int @id @default(autoincrement())
+
+  uuid String @unique @default(uuid())
+
+  components ThemeComponent[]
+
+  navbar String?
+
+  footer String?
+
+  float_button String?
+
+  is_template Boolean @default(false)
+
+  company   Company? @relation(fields: [companyId], references: [uuid])
+  companyId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ThemeComponent {
+  id Int @id @default(autoincrement())
+
+  uuid String @unique @default(uuid())
+
+  code String @unique
+
+  data Json?
+
+  docs String[]
+
+  theme   Theme  @relation(fields: [themeId], references: [uuid])
+  themeId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
